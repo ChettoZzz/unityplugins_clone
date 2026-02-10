@@ -1,0 +1,40 @@
+name: Build Core and GameKit
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    # Passiamo a macOS 15 per avere il supporto nativo a Xcode 16
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Select Xcode 16.1
+        run: |
+          # Selezioniamo Xcode 16.1 che è lo standard su macos-15
+          sudo xcode-select -s /Applications/Xcode_16.1.app || sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Run build.py (Core & GameKit Only)
+        env:
+          CI: true
+        run: |
+          # -p specifica i plugin: usiamo i nomi esatti delle cartelle
+          # -f pulisce tutto per evitare conflitti con build precedenti
+          yes Y | python3 build.py -b all -f -m iOS macOS -p Core GameKit -o Build
+
+      - name: Upload artifacts
+        if: always() # Carica i log anche se la build fallisce parzialmente
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-gamekit-plugins
+          path: |
+            Build/**/*.tgz
+            Build/*.tgz
